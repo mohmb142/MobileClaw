@@ -1,0 +1,48 @@
+name: Release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: "اسم الإصدار"
+        required: false
+        default: "Astra Mobile"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: تنزيل المشروع
+        uses: actions/checkout@v6
+
+      - name: إعداد Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: إعداد Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: بناء APK
+        run: ./gradlew assembleDebug
+
+      - name: تجهيز ملف APK
+        run: |
+          mkdir -p release
+          cp app/build/outputs/apk/debug/app-debug.apk release/Astra-Mobile-debug.apk
+
+      - name: إنشاء Release ورفع APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_NAME: ${{ inputs.release_name }}
+        run: |
+          TAG="astra-mobile-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" \
+            release/Astra-Mobile-debug.apk \
+            --title "${RELEASE_NAME:-Astra Mobile} #${GITHUB_RUN_NUMBER}" \
+            --notes "تم إنشاء APK تلقائيًا بواسطة GitHub Actions. هذا إصدار Debug قابل للتثبيت للاختبار." \
+            --target "$GITHUB_SHA"
