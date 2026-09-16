@@ -4,4 +4,5 @@
 
 - الهدف: `assembleDebug` + `testDebugUnitTest`
 - الناتج المتوقع: `debug-apk`
-- بعد نجاح البناء: ربط `AIRouter` مع مسار `AgentRuntime` وواجهة المحادثة.
+- بعد نجاح البناء: ربط طبقة Astra بمسار AgentRuntime/ClaudeApiClient الحالي دون كسر أدوات الهاتف.
+- حالة التنفيذ: اختبار البناء بعد آخر تغييرات Astra.
