@@ -97,7 +97,9 @@ class UserPreferences(private val context: Context) {
     companion object {
         const val DEFAULT_PROVIDER = "google"
         const val DEFAULT_MODEL = "gemini-2.5-flash"
-        const val DEFAULT_FAILOVER_MAX_ATTEMPTS = 4
-        val DEFAULT_FAILOVER_CHAIN = listOf("google", "groq", "openrouter", "huggingface")
+        const val DEFAULT_FAILOVER_MAX_ATTEMPTS = 3
+        // Keep the default chain limited to providers that exist in the native provider catalog.
+        // This prevents an unknown provider ID from falling back to Anthropic via fromId().
+        val DEFAULT_FAILOVER_CHAIN = listOf("google", "groq", "openrouter")
     }
 }
