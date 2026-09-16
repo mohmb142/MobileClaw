@@ -32,7 +32,7 @@ data class ProviderConfig(
 )
 
 sealed class AIProviderException(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    class Http(val code: Int, message: String) : AIProviderException(message)
-    class Timeout(message: String) : AIProviderException(message)
-    class Invalid(message: String) : AIProviderException(message)
+    class Http(val code: Int, message: String, cause: Throwable? = null) : AIProviderException(message, cause)
+    class Timeout(message: String, cause: Throwable? = null) : AIProviderException(message, cause)
+    class Invalid(message: String, cause: Throwable? = null) : AIProviderException(message, cause)
 }
