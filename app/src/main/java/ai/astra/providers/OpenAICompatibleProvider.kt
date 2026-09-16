@@ -11,7 +11,12 @@ import io.ktor.http.contentType
 import kotlinx.serialization.Serializable
 
 @Serializable
-private data class ChatBody(val model: String, val messages: List<AIMessage>, val temperature: Double = 0.2, val max_tokens: Int = 2048)
+private data class ChatBody(
+    val model: String,
+    val messages: List<AIMessage>,
+    val temperature: Double = 0.2,
+    val max_tokens: Int = 2048
+)
 
 @Serializable
 private data class ChatChoice(val message: AIMessage)
@@ -27,19 +32,43 @@ class OpenAICompatibleProvider(
     override val name: String = config.name
 
     override suspend fun chat(request: AIRequest, model: String?): AIResponse {
+        if (!config.enabled) throw AIProviderException.Invalid("${config.name} is disabled")
         if (config.apiKey.isBlank()) throw AIProviderException.Invalid("API key for ${config.name} is empty")
+
+        val selectedModel = model ?: request.model ?: config.defaultModel
         val started = System.currentTimeMillis()
-        val result: ChatResult = try {
-            client.post(config.baseUrl.trimEnd('/') + "/chat/completions") {
+
+        try {
+            val response = client.post(config.baseUrl.trimEnd('/') + "/chat/completions") {
                 contentType(ContentType.Application.Json)
                 header(HttpHeaders.Authorization, "Bearer ${config.apiKey}")
-                setBody(ChatBody(model ?: request.model ?: config.defaultModel, request.messages, request.temperature, request.maxTokens))
-            }.body()
-        } catch (e: Exception) {
-            throw AIProviderException.Timeout("${config.name}: ${e.message ?: "network error"}")
+                setBody(ChatBody(selectedModel, request.messages, request.temperature, request.maxTokens))
+            }
+
+            if (response.status.value !in 200..299) {
+                throw AIProviderException.Http(
+                    response.status.value,
+                    "${config.name}: HTTP ${response.status.value}"
+                )
+            }
+
+            val result: ChatResult = response.body()
+            val text = result.choices.firstOrNull()?.message?.content?.trim()
+                ?: throw AIProviderException.Invalid("${config.name}: empty response")
+
+            return AIResponse(
+                text = text,
+                provider = id,
+                model = selectedModel,
+                latencyMs = System.currentTimeMillis() - started
+            )
+        } catch (error: AIProviderException) {
+            throw error
+        } catch (error: Exception) {
+            throw AIProviderException.Timeout(
+                "${config.name}: ${error.message ?: "network error"}",
+                error
+            )
         }
-        val text = result.choices.firstOrNull()?.message?.content?.trim()
-            ?: throw AIProviderException.Invalid("${config.name}: empty response")
-        return AIResponse(text, id, model ?: request.model ?: config.defaultModel, System.currentTimeMillis() - started)
     }
 }
